@@ -1,435 +1,1362 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Shinobi Bout v1.0 — Web Engine</title>
-<style>
-  :root {
-    --bg-dark: #0f172a;
-    --card-bg: #1e293b;
-    --accent-red: #ef4444;
-    --accent-blue: #3b82f6;
-    --accent-gold: #f59e0b;
-    --accent-green: #10b981;
-    --accent-purple: #8b5cf6;
-    --text-light: #f8fafc;
-    --text-muted: #94a3b8;
-  }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geki: Shinobi Bout Online (Gemaki)</title>
+    <!-- PeerJS CDN for WebRTC Online Multiplayer -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #0d0f12;
+            --panel-bg: rgba(22, 27, 34, 0.92);
+            --border-gold: #c9a050;
+            --accent-red: #d9383a;
+            --chakra-fire: #ef4444;
+            --chakra-water: #3b82f6;
+            --chakra-lightning: #eab308;
+            --chakra-earth: #10b981;
+            --chakra-wind: #8b5cf6;
+            --text-light: #f3f4f6;
+            --text-muted: #9ca3af;
+        }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
-  body { background: var(--bg-dark); color: var(--text-light); padding: 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
 
-  .game-container { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 15px; }
-  header { text-align: center; border-bottom: 2px solid #334155; padding-bottom: 10px; }
-  header h1 { font-size: 1.8rem; letter-spacing: 2px; color: var(--accent-gold); text-transform: uppercase; }
-  
-  /* Battlefield Area */
-  .battlefield { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; background: #020617; border: 1px solid #334155; border-radius: 12px; padding: 15px; position: relative; }
-  .player-zone { display: flex; flex-direction: column; gap: 10px; }
-  .player-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 1.1rem; }
-  
-  /* Active Card UI */
-  .active-card { background: var(--card-bg); border: 2px solid #475569; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; position: relative; transition: all 0.3s ease; }
-  .active-card.p1 { border-color: var(--accent-blue); }
-  .active-card.p2 { border-color: var(--accent-red); }
-  
-  .card-top { display: flex; justify-content: space-between; align-items: center; }
-  .card-name { font-size: 1.2rem; font-weight: bold; }
-  .card-element { font-size: 0.85rem; padding: 2px 8px; border-radius: 12px; background: #334155; }
-  
-  .element-Fire { color: #f87171; }
-  .element-Wind { color: #34d399; }
-  .element-Lightning { color: #facc15; }
-  .element-Earth { color: #fb923c; }
-  .element-Water { color: #60a5fa; }
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(239, 68, 68, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 50% 50%, rgba(234, 179, 8, 0.05) 0%, transparent 60%);
+        }
 
-  .hp-bar-container { background: #334155; height: 14px; border-radius: 7px; overflow: hidden; position: relative; }
-  .hp-bar-fill { background: var(--accent-green); height: 100%; width: 100%; transition: width 0.3s ease; }
-  .hp-text { position: absolute; width: 100%; text-align: center; font-size: 0.75rem; line-height: 14px; font-weight: bold; text-shadow: 0 0 2px black; }
+        /* --- Header / Top Bar --- */
+        header {
+            background: linear-gradient(180deg, #161b22 0%, rgba(22,27,34,0.8) 100%);
+            border-bottom: 2px solid var(--border-gold);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
 
-  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; font-size: 0.85rem; text-align: center; background: #0f172a; padding: 6px; border-radius: 6px; }
-  .status-badges { display: flex; gap: 5px; min-height: 20px; flex-wrap: wrap; }
-  .badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: var(--accent-purple); font-weight: bold; }
+        .logo-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
 
-  /* Bench Units */
-  .bench-container { display: flex; gap: 8px; }
-  .bench-unit { background: #0f172a; border: 1px dashed #475569; padding: 6px; border-radius: 6px; flex: 1; font-size: 0.75rem; text-align: center; cursor: pointer; }
-  .bench-unit.active { border-style: solid; border-color: var(--accent-gold); }
-  .bench-unit.dead { opacity: 0.4; cursor: not-allowed; text-decoration: line-through; }
+        .symbol-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--border-gold);
+            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2L2 22h20L12 2zm0 4.5l6.5 13H5.5L12 6.5z'/%3E%3C/svg%3E") no-repeat center / contain;
+            -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2L2 22h20L12 2zm0 4.5l6.5 13H5.5L12 6.5z'/%3E%3C/svg%3E") no-repeat center / contain;
+        }
 
-  /* Chakra Meter */
-  .chakra-container { background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 8px; display: flex; align-items: center; justify-content: space-between; }
-  .chakra-dots { display: flex; gap: 4px; }
-  .chakra-dot { width: 10px; height: 10px; border-radius: 50%; background: #334155; }
-  .chakra-dot.active { background: var(--accent-blue); box-shadow: 0 0 6px var(--accent-blue); }
+        h1 {
+            font-size: 1.4rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--border-gold);
+            text-shadow: 0 0 8px rgba(201, 160, 80, 0.4);
+        }
 
-  /* Controls Panel */
-  .controls-panel { background: var(--card-bg); border-radius: 12px; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-  .action-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
-  
-  button { background: #334155; color: white; border: none; padding: 10px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; font-size: 0.9rem; }
-  button:hover:not(:disabled) { background: #475569; }
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
-  button.btn-primary { background: var(--accent-blue); }
-  button.btn-primary:hover:not(:disabled) { background: #2563eb; }
-  button.btn-special { background: var(--accent-purple); }
-  button.btn-special:hover:not(:disabled) { background: #7c3aed; }
+        .network-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
 
-  /* Match Log Box */
-  .log-box { background: #020617; border: 1px solid #334155; border-radius: 8px; height: 140px; overflow-y: auto; padding: 10px; font-family: monospace; font-size: 0.85rem; display: flex; flex-direction: column; gap: 4px; }
-  .log-entry { margin: 0; line-height: 1.3; }
-  .log-p1 { color: #60a5fa; }
-  .log-p2 { color: #f87171; }
-  .log-sys { color: var(--accent-gold); }
+        .btn {
+            background: linear-gradient(135deg, #2a323d 0%, #1c222b 100%);
+            color: var(--text-light);
+            border: 1px solid var(--border-gold);
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+        }
 
-  @media (max-width: 600px) {
-    .battlefield { grid-template-columns: 1fr; }
-  }
-</style>
+        .btn:hover {
+            background: var(--border-gold);
+            color: #000;
+            box-shadow: 0 0 12px rgba(201, 160, 80, 0.6);
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn-red {
+            border-color: var(--accent-red);
+            background: linear-gradient(135deg, #4a1516 0%, #290b0c 100%);
+        }
+
+        .btn-red:hover {
+            background: var(--accent-red);
+            color: #fff;
+            box-shadow: 0 0 12px rgba(217, 56, 58, 0.6);
+        }
+
+        /* --- Main Arena Layout --- */
+        main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 280px 1fr 280px;
+            gap: 15px;
+            padding: 15px;
+            max-width: 1600px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 1100px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* --- Side Panels (Player Stats & Battle Scroll Log) --- */
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid rgba(201, 160, 80, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .panel-header {
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--border-gold);
+            border-bottom: 1px solid rgba(201, 160, 80, 0.2);
+            padding-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .player-card-ui {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid #2a323d;
+            border-radius: 6px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: border-color 0.3s ease;
+        }
+
+        .player-card-ui.active-turn {
+            border-color: var(--border-gold);
+            box-shadow: 0 0 10px rgba(201, 160, 80, 0.3);
+            background: rgba(201, 160, 80, 0.05);
+        }
+
+        .avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid var(--border-gold);
+            background-size: cover;
+            background-position: center;
+            flex-shrink: 0;
+            background-color: #2a323d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .player-info {
+            flex: 1;
+        }
+
+        .player-name {
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: var(--text-light);
+        }
+
+        .player-cards-count {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* Battle Scroll Log & Chat */
+        .log-container {
+            flex: 1;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid #2a323d;
+            border-radius: 6px;
+            padding: 10px;
+            overflow-y: auto;
+            font-size: 0.82rem;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 250px;
+        }
+
+        .log-entry {
+            line-height: 1.3;
+            color: #d1d5db;
+        }
+
+        .log-entry span.highlight {
+            color: var(--border-gold);
+            font-weight: 600;
+        }
+
+        .chat-input-group {
+            display: flex;
+            gap: 6px;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid #2a323d;
+            border-radius: 4px;
+            padding: 6px 10px;
+            color: #fff;
+            font-size: 0.85rem;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: var(--border-gold);
+        }
+
+        /* --- Center Battle Arena --- */
+        .arena {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 15px;
+            align-items: center;
+        }
+
+        /* Play Mat (Deck & Discard Pile) */
+        .play-field {
+            width: 100%;
+            height: 240px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 2px dashed rgba(201, 160, 80, 0.3);
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+            position: relative;
+        }
+
+        .field-slot {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .slot-label {
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--border-gold);
+        }
+
+        /* --- Card Architecture --- */
+        .card {
+            width: 100px;
+            height: 145px;
+            border-radius: 8px;
+            background: #1e242c;
+            border: 2px solid #3a4454;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 6px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-8px) scale(1.04);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.8);
+            z-index: 5;
+        }
+
+        .card.selected {
+            transform: translateY(-16px) scale(1.06);
+            border-color: var(--border-gold);
+            box-shadow: 0 0 15px var(--border-gold);
+            z-index: 10;
+        }
+
+        /* Card Elements & Styling */
+        .card[data-chakra="fire"] { border-color: var(--chakra-fire); }
+        .card[data-chakra="water"] { border-color: var(--chakra-water); }
+        .card[data-chakra="lightning"] { border-color: var(--chakra-lightning); }
+        .card[data-chakra="earth"] { border-color: var(--chakra-earth); }
+        .card[data-chakra="wind"] { border-color: var(--chakra-wind); }
+        .card[data-chakra="jutsu"] { border-color: #a855f7; }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-value {
+            font-size: 1.1rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .card-element-icon {
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .card-art {
+            flex: 1;
+            margin: 4px 0;
+            background-size: cover;
+            background-position: center;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.1);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .card-art svg {
+            width: 80%;
+            height: 80%;
+            opacity: 0.85;
+        }
+
+        .card-footer {
+            text-align: center;
+            font-size: 0.65rem;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-light);
+            text-transform: uppercase;
+        }
+
+        /* Card Back */
+        .card-back {
+            background: linear-gradient(135deg, #1e242b 0%, #0d1015 100%);
+            border: 2px solid var(--border-gold);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card-back::after {
+            content: "渦";
+            font-size: 2rem;
+            color: var(--border-gold);
+            opacity: 0.4;
+        }
+
+        /* Hand Containers */
+        .hand-container {
+            width: 100%;
+            min-height: 160px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            position: relative;
+        }
+
+        .cards-flex {
+            display: flex;
+            justify-content: center;
+            gap: -20px;
+            flex-wrap: wrap;
+            max-width: 900px;
+        }
+
+        /* Action Buttons Area */
+        .controls-bar {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            backdrop-filter: blur(8px);
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-box {
+            background: var(--panel-bg);
+            border: 2px solid var(--border-gold);
+            border-radius: 12px;
+            padding: 25px;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 0 30px rgba(201, 160, 80, 0.4);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            text-align: center;
+        }
+
+        .modal-title {
+            font-size: 1.4rem;
+            color: var(--border-gold);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .modal-body {
+            font-size: 0.95rem;
+            color: var(--text-light);
+            line-height: 1.4;
+        }
+
+        .color-picker {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .color-btn {
+            padding: 12px;
+            border-radius: 6px;
+            border: 2px solid transparent;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            color: #fff;
+            transition: transform 0.2s;
+        }
+
+        .color-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .color-fire { background: var(--chakra-fire); }
+        .color-water { background: var(--chakra-water); }
+        .color-lightning { background: var(--chakra-lightning); color: #000; }
+        .color-earth { background: var(--chakra-earth); }
+        .color-wind { background: var(--chakra-wind); }
+
+        /* Room Connect Inputs */
+        .room-input {
+            width: 100%;
+            padding: 10px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--border-gold);
+            border-radius: 4px;
+            color: #fff;
+            font-size: 1rem;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Banner Notifications */
+        .turn-banner {
+            position: absolute;
+            top: 10px;
+            background: rgba(0,0,0,0.7);
+            border: 1px solid var(--border-gold);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            color: var(--border-gold);
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
 
-<div class="game-container">
-  <header>
-    <h1>🥷 Shinobi Bout v1.0</h1>
-  </header>
-
-  <div class="battlefield">
-    <!-- PLAYER 1 ZONE -->
-    <div class="player-zone">
-      <div class="player-header">
-        <span style="color: var(--accent-blue)">Player 1 (You)</span>
-      </div>
-      <div class="active-card p1" id="p1-card">
-        <div class="card-top">
-          <span class="card-name" id="p1-name">Naruto Uzumaki</span>
-          <span class="card-element element-Wind" id="p1-elem">Wind</span>
+    <!-- Header / Navbar -->
+    <header>
+        <div class="logo-group">
+            <div class="symbol-icon"></div>
+            <h1>Shinobi Bout <span style="font-size: 0.8rem; color: var(--text-muted);">Online</span></h1>
         </div>
-        <div class="hp-bar-container">
-          <div class="hp-bar-fill" id="p1-hp-fill"></div>
-          <div class="hp-text" id="p1-hp-text">120 / 120</div>
+        <div class="network-controls">
+            <button class="btn" id="btn-multiplayer">🌐 Online Lobby</button>
+            <button class="btn btn-red" id="btn-restart">🔄 Restart Game</button>
         </div>
-        <div class="stats-grid">
-          <div>⚔️ ATK: <span id="p1-atk">35</span></div>
-          <div>🛡️ DEF: <span id="p1-def">30</span></div>
-          <div>💨 SPD: <span id="p1-spd">35</span></div>
+    </header>
+
+    <!-- Main Game Grid -->
+    <main>
+        <!-- Left Panel: Game Rules & Status -->
+        <aside class="panel">
+            <div class="panel-header">
+                <span>Match Info</span>
+                <span id="network-status-badge" style="font-size: 0.7rem; color: #10b981;">SOLO vs AI</span>
+            </div>
+            
+            <div class="player-card-ui" id="opponent-ui">
+                <div class="avatar" style="background-image: url('https://api.dicebear.com/7.x/bottts/svg?seed=Boruto');"></div>
+                <div class="player-info">
+                    <div class="player-name" id="opponent-name-text">Boruto AI</div>
+                    <div class="player-cards-count" id="opponent-card-count">Cards: 7</div>
+                </div>
+            </div>
+
+            <div class="player-card-ui" id="player-ui">
+                <div class="avatar" style="background-image: url('https://api.dicebear.com/7.x/bottts/svg?seed=Shinobi');"></div>
+                <div class="player-info">
+                    <div class="player-name" id="player-name-text">You (Genin)</div>
+                    <div class="player-cards-count" id="player-card-count">Cards: 7</div>
+                </div>
+            </div>
+
+            <div style="margin-top: 10px; font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;">
+                <p><strong>Rules Summary:</strong></p>
+                <ul style="padding-left: 15px; margin-top: 4px;">
+                    <li>Match card by <strong>Element</strong> or <strong>Value</strong>.</li>
+                    <li>Play <strong>Sequential Runs</strong> (e.g., Fire 3-4-5) together.</li>
+                    <li><strong>Jutsu Cards:</strong> Skip, Draw +2, Draw +4, Color Shift.</li>
+                    <li>First to empty hand wins!</li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- Center: Active Play Arena -->
+        <section class="arena">
+            <div class="turn-banner" id="turn-banner-text">YOUR TURN</div>
+
+            <!-- Opponent Hand (Face Down) -->
+            <div class="hand-container" id="opponent-hand">
+                <!-- Rendered Dynamically -->
+            </div>
+
+            <!-- Play Mat / Table Center -->
+            <div class="play-field">
+                <!-- Draw Deck Slot -->
+                <div class="field-slot">
+                    <span class="slot-label">Deck (<span id="deck-count">0</span>)</span>
+                    <div class="card card-back" id="deck-pile" onclick="handleDrawCard()"></div>
+                </div>
+
+                <!-- Discard Active Slot -->
+                <div class="field-slot">
+                    <span class="slot-label">Active Discard</span>
+                    <div id="discard-pile">
+                        <!-- Active Card Rendered Dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Player Controls -->
+            <div class="controls-bar">
+                <button class="btn" id="btn-play-cards" onclick="handlePlaySelectedCards()" disabled>Play Selected</button>
+                <button class="btn" id="btn-draw-card" onclick="handleDrawCard()">Draw Card</button>
+            </div>
+
+            <!-- Player Hand (Interactive) -->
+            <div class="hand-container" id="player-hand">
+                <!-- Rendered Dynamically -->
+            </div>
+        </section>
+
+        <!-- Right Panel: Battle Scroll Log & Live Chat -->
+        <aside class="panel">
+            <div class="panel-header">
+                <span>Battle Scroll</span>
+                <span>📜</span>
+            </div>
+
+            <div class="log-container" id="battle-log">
+                <div class="log-entry"><span class="highlight">System:</span> Welcome to Geki: Shinobi Bout!</div>
+            </div>
+
+            <div class="chat-input-group">
+                <input type="text" class="chat-input" id="chat-input" placeholder="Send ninja message..." onkeydown="if(event.key==='Enter') sendChatMessage()">
+                <button class="btn" onclick="sendChatMessage()">Send</button>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Modal 1: Online Multiplayer Lobby -->
+    <div class="modal-overlay" id="multiplayer-modal">
+        <div class="modal-box">
+            <div class="modal-title">Online Multiplayer</div>
+            <div class="modal-body">
+                Connect with another Shinobi across the world using PeerJS WebRTC.
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div>
+                    <label style="font-size: 0.8rem; color: var(--text-muted);">Your Room ID:</label>
+                    <input type="text" class="room-input" id="my-peer-id" readonly placeholder="Generating ID...">
+                </div>
+                <div>
+                    <label style="font-size: 0.8rem; color: var(--text-muted);">Connect to Friend's Room ID:</label>
+                    <input type="text" class="room-input" id="target-peer-id" placeholder="ENTER ROOM ID">
+                </div>
+                <button class="btn" id="btn-connect-peer" onclick="connectToPeer()">Join Match</button>
+                <button class="btn btn-red" onclick="closeModal('multiplayer-modal')">Cancel / Play Offline</button>
+            </div>
         </div>
-        <div class="status-badges" id="p1-statuses"></div>
-      </div>
-
-      <div class="chakra-container">
-        <span>🌀 Chakra:</span>
-        <div class="chakra-dots" id="p1-chakra-dots"></div>
-      </div>
-
-      <div class="bench-container" id="p1-bench"></div>
     </div>
 
-    <!-- PLAYER 2 ZONE -->
-    <div class="player-zone">
-      <div class="player-header">
-        <span style="color: var(--accent-red)">Player 2 (AI)</span>
-      </div>
-      <div class="active-card p2" id="p2-card">
-        <div class="card-top">
-          <span class="card-name" id="p2-name">Sasuke Uchiha</span>
-          <span class="card-element element-Lightning" id="p2-elem">Lightning</span>
+    <!-- Modal 2: Color / Element Selector (For Wild Chakra Shift Card) -->
+    <div class="modal-overlay" id="color-modal">
+        <div class="modal-box">
+            <div class="modal-title">Chakra Shift</div>
+            <div class="modal-body">Choose the active Chakra Element for the next play:</div>
+            <div class="color-picker">
+                <button class="color-btn color-fire" onclick="selectChakraElement('fire')">Fire</button>
+                <button class="color-btn color-water" onclick="selectChakraElement('water')">Water</button>
+                <button class="color-btn color-lightning" onclick="selectChakraElement('lightning')">Lightning</button>
+                <button class="color-btn color-earth" onclick="selectChakraElement('earth')">Earth</button>
+                <button class="color-btn color-wind" onclick="selectChakraElement('wind')">Wind</button>
+            </div>
         </div>
-        <div class="hp-bar-container">
-          <div class="hp-bar-fill" id="p2-hp-fill"></div>
-          <div class="hp-text" id="p2-hp-text">110 / 110</div>
-        </div>
-        <div class="stats-grid">
-          <div>⚔️ ATK: <span id="p2-atk">40</span></div>
-          <div>🛡️ DEF: <span id="p2-def">28</span></div>
-          <div>💨 SPD: <span id="p2-spd">38</span></div>
-        </div>
-        <div class="status-badges" id="p2-statuses"></div>
-      </div>
-
-      <div class="chakra-container">
-        <span>🌀 Chakra:</span>
-        <div class="chakra-dots" id="p2-chakra-dots"></div>
-      </div>
-
-      <div class="bench-container" id="p2-bench"></div>
     </div>
-  </div>
 
-  <!-- CONTROLS PANEL -->
-  <div class="controls-panel">
-    <div class="action-buttons">
-      <button class="btn-primary" id="btn-attack" onclick="handleAction('attack')">⚔️ Strike</button>
-      <button class="btn-special" id="btn-jutsu" onclick="handleAction('jutsu')">🌀 Jutsu (4 Ck)</button>
-      <button class="btn-special" id="btn-ultimate" onclick="handleAction('ultimate')" style="background: var(--accent-gold); color: black;">🔥 Ultimate (8 Ck)</button>
-      <button id="btn-switch" onclick="handleAction('switch')">🔁 Switch Shinobi</button>
+    <!-- Modal 3: Game Over Screen -->
+    <div class="modal-overlay" id="gameover-modal">
+        <div class="modal-box">
+            <div class="modal-title" id="gameover-title">VICTORY!</div>
+            <div class="modal-body" id="gameover-body">
+                You emptied your hand and achieved the title of Shadow Hokage!
+            </div>
+            <button class="btn" onclick="initGame(); closeModal('gameover-modal');">Play Again</button>
+        </div>
     </div>
-  </div>
 
-  <!-- LOG BOX -->
-  <div class="log-box" id="game-log"></div>
-</div>
+    <!-- Main Game Logic Script -->
+    <script>
+        /* --- Audio Sound Effects Generator (Web Audio API) --- */
+        const AudioSys = {
+            ctx: null,
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            },
+            playPlayCard() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.1);
+            },
+            playDrawCard() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(250, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            },
+            playJutsu() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(900, this.ctx.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+        };
 
-<script>
-// Elemental Cycle: Fire > Wind > Lightning > Earth > Water > Fire
-const ELEMENT_ADV = { Fire: "Wind", Wind: "Lightning", Lightning: "Earth", Earth: "Water", Water: "Fire" };
+        /* --- Game State & Character Database --- */
+        const CHAKRA_TYPES = ['fire', 'water', 'lightning', 'earth', 'wind'];
+        
+        const SHINOBI_DATABASE = {
+            fire: ['Sasuke', 'Itachi', 'Jiraiya', 'Madara', 'Sarada', 'Asuma', 'Shisui', 'Kagemasa', 'Kawaki', 'Koji'],
+            water: ['Tobirama', 'Kisame', 'Suigetsu', 'Mei', 'Utakata', 'Yagura', 'Chojuro', 'Kagura', 'Sumire', 'Buntan'],
+            lightning: ['Kakashi', 'Killer Bee', 'Raikage', 'Boruto', 'Darui', 'Omoi', 'Mitsuki', 'Denki', 'Kaminarimon', 'Enchu'],
+            earth: ['Gaara', 'Onoki', 'Yamato', 'Tsunade', 'Kurotsuchi', 'Kankuro', 'Iwabee', 'Akatsuchi', 'Shinki', 'Yodo'],
+            wind: ['Naruto', 'Temari', 'Danzo', 'Shikadai', 'Mirai', 'Inojin', 'Chocho', 'Metal Lee', 'Wasabi', 'Namida']
+        };
 
-class Shinobi {
-  constructor(id, name, elem, hp, atk, def, spd, jutsuName, ultName) {
-    this.id = id;
-    this.name = name;
-    this.elem = elem;
-    this.maxHp = hp;
-    this.hp = hp;
-    this.atk = atk;
-    this.def = def;
-    this.spd = spd;
-    this.jutsuName = jutsuName;
-    this.ultName = ultName;
-    this.statuses = [];
-    this.isAlive = true;
-  }
-}
+        let gameState = {
+            deck: [],
+            discardPile: [],
+            playerHand: [],
+            opponentHand: [],
+            currentTurn: 'player', // 'player' or 'opponent'
+            activeElement: 'fire',
+            activeValue: null,
+            selectedCardIndices: [],
+            isMultiplayer: false,
+            isHost: true,
+            peer: null,
+            conn: null,
+            broadcastChannel: null
+        };
 
-class Player {
-  constructor(name, team, isAi = false) {
-    this.name = name;
-    this.team = team;
-    this.activeIdx = 0;
-    this.chakra = 3;
-    this.maxChakra = 20;
-    this.isAi = isAi;
-  }
+        /* --- SVG Graphic Generators for Cards --- */
+        function getElementSVG(type) {
+            switch(type) {
+                case 'fire': return `<svg viewBox="0 0 24 24" fill="#ef4444"><path d="M12 23c6.075 0 11-4.925 11-11 0-6.075-4.925-11-11-11S1 5.925 1 12c0 6.075 4.925 11 11 11zm0-18a7 7 0 017 7c0 3.866-3.134 7-7 7s-7-3.134-7-7a7 7 0 017-7z"/></svg>`;
+                case 'water': return `<svg viewBox="0 0 24 24" fill="#3b82f6"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>`;
+                case 'lightning': return `<svg viewBox="0 0 24 24" fill="#eab308"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>`;
+                case 'earth': return `<svg viewBox="0 0 24 24" fill="#10b981"><path d="M12 2L2 22h20L12 2zm0 4l6.5 13h-13L12 6z"/></svg>`;
+                case 'wind': return `<svg viewBox="0 0 24 24" fill="#8b5cf6"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16z"/></svg>`;
+                default: return `<svg viewBox="0 0 24 24" fill="#a855f7"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>`;
+            }
+        }
 
-  getActive() { return this.team[this.activeIdx]; }
-  
-  addChakra(amt) { this.chakra = Math.min(this.maxChakra, this.chakra + amt); }
+        /* --- Deck Generation & Initialization --- */
+        function createDeck() {
+            const deck = [];
+            let idCounter = 1;
 
-  isAlive() { return this.team.some(unit => unit.isAlive); }
-}
+            // Generate 50 Element Cards (10 per element)
+            CHAKRA_TYPES.forEach(element => {
+                for (let val = 1; val <= 10; val++) {
+                    const charName = SHINOBI_DATABASE[element][val - 1] || 'Shinobi';
+                    deck.push({
+                        id: idCounter++,
+                        isJutsu: false,
+                        element: element,
+                        value: val,
+                        name: charName
+                    });
+                }
+            });
 
-// Initial Team Roster Setup
-let p1 = new Player("Player 1", [
-  new Shinobi("SB-0001", "Naruto Uzumaki", "Wind", 120, 35, 30, 35, "Rasengan", "Sage Mode Strike"),
-  new Shinobi("SB-0004", "Kakashi Hatake", "Lightning", 115, 38, 32, 40, "Raikiri", "Kamui"),
-  new Shinobi("SB-0003", "Sakura Haruno", "Earth", 130, 32, 35, 28, "Cherry Blossom Burst", "100 Heal Seal")
-]);
+            // Generate 10 Special Action Jutsu Cards
+            const jutsus = [
+                { name: 'Substitution (Skip)', type: 'skip' },
+                { name: 'Substitution (Skip)', type: 'skip' },
+                { name: 'Shadow Clone (+2)', type: 'draw2' },
+                { name: 'Shadow Clone (+2)', type: 'draw2' },
+                { name: 'Reaper Seal (+4)', type: 'draw4' },
+                { name: 'Reaper Seal (+4)', type: 'draw4' },
+                { name: 'Chakra Shift', type: 'wild' },
+                { name: 'Chakra Shift', type: 'wild' },
+                { name: 'Chakra Shift', type: 'wild' },
+                { name: 'Chakra Shift', type: 'wild' }
+            ];
 
-let p2 = new Player("Player 2", [
-  new Shinobi("SB-0002", "Sasuke Uchiha", "Lightning", 110, 40, 28, 38, "Chidori", "Kirin"),
-  new Shinobi("SB-0032", "Gaara", "Earth", 135, 36, 48, 26, "Sand Tsunami", "Imperial Desert Funeral"),
-  new Shinobi("SB-0010", "Itachi Uchiha", "Fire", 115, 45, 30, 42, "Fireball Jutsu", "Tsukuyomi")
-], true);
+            jutsus.forEach(j => {
+                deck.push({
+                    id: idCounter++,
+                    isJutsu: true,
+                    element: 'jutsu',
+                    value: j.type,
+                    name: j.name
+                });
+            });
 
-let isPlayerTurn = true;
+            // Fisher-Yates Shuffle
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
 
-function log(msg, type = "sys") {
-  const box = document.getElementById('game-log');
-  const div = document.createElement('div');
-  div.className = `log-entry log-${type}`;
-  div.innerText = msg;
-  box.appendChild(div);
-  box.scrollTop = box.scrollHeight;
-}
+            return deck;
+        }
 
-function updateUI() {
-  // P1 Render
-  const p1Active = p1.getActive();
-  document.getElementById('p1-name').innerText = p1Active.name;
-  document.getElementById('p1-elem').innerText = p1Active.elem;
-  document.getElementById('p1-elem').className = `card-element element-${p1Active.elem}`;
-  document.getElementById('p1-hp-fill').style.width = `${(p1Active.hp / p1Active.maxHp) * 100}%`;
-  document.getElementById('p1-hp-text').innerText = `${Math.max(0, p1Active.hp)} /${p1Active.maxHp}`;
-  document.getElementById('p1-atk').innerText = p1Active.atk;
-  document.getElementById('p1-def').innerText = p1Active.def;
-  document.getElementById('p1-spd').innerText = p1Active.spd;
+        function initGame() {
+            gameState.deck = createDeck();
+            gameState.playerHand = [];
+            gameState.opponentHand = [];
+            gameState.discardPile = [];
+            gameState.selectedCardIndices = [];
+            gameState.currentTurn = 'player';
 
-  // P1 Chakra
-  const p1ChakraBox = document.getElementById('p1-chakra-dots');
-  p1ChakraBox.innerHTML = '';
-  for (let i = 0; i < 10; i++) {
-    const dot = document.createElement('div');
-    dot.className = `chakra-dot ${i < p1.chakra ? 'active' : ''}`;
-    p1ChakraBox.appendChild(dot);
-  }
+            // Deal 7 Cards to Each Player
+            for (let i = 0; i < 7; i++) {
+                gameState.playerHand.push(gameState.deck.pop());
+                gameState.opponentHand.push(gameState.deck.pop());
+            }
 
-  // P1 Bench
-  const p1Bench = document.getElementById('p1-bench');
-  p1Bench.innerHTML = '';
-  p1.team.forEach((unit, idx) => {
-    const div = document.createElement('div');
-    div.className = `bench-unit ${idx === p1.activeIdx ? 'active' : ''} ${!unit.isAlive ? 'dead' : ''}`;
-    div.innerText = `${unit.name} (${unit.hp}HP)`;
-    if (unit.isAlive && idx !== p1.activeIdx) {
-      div.onclick = () => switchActive(p1, idx);
-    }
-    p1Bench.appendChild(div);
-  });
+            // Flip Initial Discard Card (Must be non-jutsu)
+            let initialCard = gameState.deck.pop();
+            while (initialCard.isJutsu) {
+                gameState.deck.unshift(initialCard);
+                initialCard = gameState.deck.pop();
+            }
 
-  // P2 Render
-  const p2Active = p2.getActive();
-  document.getElementById('p2-name').innerText = p2Active.name;
-  document.getElementById('p2-elem').innerText = p2Active.elem;
-  document.getElementById('p2-elem').className = `card-element element-${p2Active.elem}`;
-  document.getElementById('p2-hp-fill').style.width = `${(p2Active.hp / p2Active.maxHp) * 100}%`;
-  document.getElementById('p2-hp-text').innerText = `${Math.max(0, p2Active.hp)} /${p2Active.maxHp}`;
-  document.getElementById('p2-atk').innerText = p2Active.atk;
-  document.getElementById('p2-def').innerText = p2Active.def;
-  document.getElementById('p2-spd').innerText = p2Active.spd;
+            gameState.discardPile.push(initialCard);
+            gameState.activeElement = initialCard.element;
+            gameState.activeValue = initialCard.value;
 
-  // P2 Chakra
-  const p2ChakraBox = document.getElementById('p2-chakra-dots');
-  p2ChakraBox.innerHTML = '';
-  for (let i = 0; i < 10; i++) {
-    const dot = document.createElement('div');
-    dot.className = `chakra-dot ${i < p2.chakra ? 'active' : ''}`;
-    p2ChakraBox.appendChild(dot);
-  }
+            logMessage('System', 'Game initialized! Active element: ' + gameState.activeElement.toUpperCase());
+            renderUI();
+        }
 
-  // P2 Bench
-  const p2Bench = document.getElementById('p2-bench');
-  p2Bench.innerHTML = '';
-  p2.team.forEach((unit, idx) => {
-    const div = document.createElement('div');
-    div.className = `bench-unit ${idx === p2.activeIdx ? 'active' : ''} ${!unit.isAlive ? 'dead' : ''}`;
-    div.innerText = `${unit.name} (${unit.hp}HP)`;
-    p2Bench.appendChild(div);
-  });
+        /* --- Rendering Engine --- */
+        function renderUI() {
+            // Update Counts
+            document.getElementById('deck-count').innerText = gameState.deck.length;
+            document.getElementById('player-card-count').innerText = `Cards: ${gameState.playerHand.length}`;
+            document.getElementById('opponent-card-count').innerText = `Cards: ${gameState.opponentHand.length}`;
 
-  // Control Buttons State
-  document.getElementById('btn-jutsu').disabled = !isPlayerTurn || p1.chakra < 4;
-  document.getElementById('btn-ultimate').disabled = !isPlayerTurn || p1.chakra < 8;
-  document.getElementById('btn-attack').disabled = !isPlayerTurn;
-  document.getElementById('btn-switch').disabled = !isPlayerTurn;
-}
+            // Turn Banner & Highlights
+            const turnBanner = document.getElementById('turn-banner-text');
+            const playerUI = document.getElementById('player-ui');
+            const opponentUI = document.getElementById('opponent-ui');
 
-function calculateDamage(attacker, defender, basePower) {
-  let dmg = basePower + (attacker.atk * 0.4);
-  if (ELEMENT_ADV[attacker.elem] === defender.elem) {
-    log(`🔥 Elemental Advantage! (${attacker.elem} >${defender.elem}) +25% Damage!`, isPlayerTurn ? "p1" : "p2");
-    dmg *= 1.25;
-  }
-  const finalDmg = Math.max(1, Math.floor(dmg - (defender.def * 0.2)));
-  return finalDmg;
-}
+            if (gameState.currentTurn === 'player') {
+                turnBanner.innerText = "YOUR TURN";
+                turnBanner.style.borderColor = "var(--border-gold)";
+                playerUI.classList.add('active-turn');
+                opponentUI.classList.remove('active-turn');
+            } else {
+                turnBanner.innerText = gameState.isMultiplayer ? "OPPONENT'S TURN" : "BORUTO AI'S TURN";
+                turnBanner.style.borderColor = "var(--accent-red)";
+                opponentUI.classList.add('active-turn');
+                playerUI.classList.remove('active-turn');
+            }
 
-function handleAction(type) {
-  if (!isPlayerTurn) return;
+            // Render Active Discard
+            const discardPileEl = document.getElementById('discard-pile');
+            const topDiscard = gameState.discardPile[gameState.discardPile.length - 1];
+            discardPileEl.innerHTML = renderCardHTML(topDiscard, false);
 
-  const attacker = p1.getActive();
-  const defender = p2.getActive();
+            // Render Player Hand
+            const playerHandEl = document.getElementById('player-hand');
+            playerHandEl.innerHTML = `<div class="cards-flex">${
+                gameState.playerHand.map((card, idx) => {
+                    const isSelected = gameState.selectedCardIndices.includes(idx);
+                    return renderCardHTML(card, false, idx, isSelected);
+                }).join('')
+            }</div>`;
 
-  if (type === 'attack') {
-    log(`⚔️ ${attacker.name} attacks${defender.name}!`, "p1");
-    const dmg = calculateDamage(attacker, defender, 15);
-    defender.hp -= dmg;
-    log(`💥 ${defender.name} took${dmg} damage!`, "p1");
-  } else if (type === 'jutsu') {
-    p1.chakra -= 4;
-    log(`🌀 ${attacker.name} casts${attacker.jutsuName}!`, "p1");
-    const dmg = calculateDamage(attacker, defender, 35);
-    defender.hp -= dmg;
-    log(`💥 ${defender.name} took${dmg} damage!`, "p1");
-  } else if (type === 'ultimate') {
-    p1.chakra -= 8;
-    log(`🔥 ULTIMATE! ${attacker.name} unleashes${attacker.ultName}!`, "p1");
-    const dmg = calculateDamage(attacker, defender, 65);
-    defender.hp -= dmg;
-    log(`💥 CRITICAL IMPACT! ${defender.name} took${dmg} damage!`, "p1");
-  } else if (type === 'switch') {
-    const nextIdx = p1.team.findIndex((u, i) => u.isAlive && i !== p1.activeIdx);
-    if (nextIdx !== -1) {
-      switchActive(p1, nextIdx);
-    } else {
-      log("⚠️ No other operational Shinobi to switch to!", "sys");
-      return;
-    }
-  }
+            // Render Opponent Hand (Face Down)
+            const opponentHandEl = document.getElementById('opponent-hand');
+            opponentHandEl.innerHTML = `<div class="cards-flex">${
+                gameState.opponentHand.map(() => `<div class="card card-back"></div>`).join('')
+            }</div>`;
 
-  checkFaints();
-  if (p2.isAlive()) {
-    isPlayerTurn = false;
-    updateUI();
-    setTimeout(aiTurn, 1000);
-  }
-}
+            // Enable/Disable Play Button
+            document.getElementById('btn-play-cards').disabled = gameState.selectedCardIndices.length === 0 || gameState.currentTurn !== 'player';
+        }
 
-function switchActive(player, idx) {
-  player.activeIdx = idx;
-  log(`🔁 ${player.name} switched to${player.getActive().name}!`, player.isAi ? "p2" : "p1");
-  updateUI();
-}
+        function renderCardHTML(card, isBack = false, index = null, isSelected = false) {
+            if (isBack) return `<div class="card card-back"></div>`;
 
-function checkFaints() {
-  [p1, p2].forEach(p => {
-    const active = p.getActive();
-    if (active.hp <= 0 && active.isAlive) {
-      active.hp = 0;
-      active.isAlive = false;
-      log(`💀 ${active.name} was defeated!`, p.isAi ? "p2" : "p1");
-      
-      const nextIdx = p.team.findIndex(u => u.isAlive);
-      if (nextIdx !== -1) {
-        p.activeIdx = nextIdx;
-        log(`🔁 ${p.name} deploys${p.getActive().name}!`, p.isAi ? "p2" : "p1");
-      }
-    }
-  });
+            const onclickAttr = index !== null ? `onclick="toggleCardSelect(${index})"` : '';
+            const selectedClass = isSelected ? 'selected' : '';
 
-  if (!p2.isAlive()) {
-    log("🏆 VICTORY! You defeated Player 2!", "sys");
-    disableAll();
-  } else if (!p1.isAlive()) {
-    log("💀 DEFEAT! Your team was wiped out!", "sys");
-    disableAll();
-  }
-}
+            return `
+                <div class="card ${selectedClass}" data-chakra="${card.element}" ${onclickAttr}>
+                    <div class="card-header">
+                        <span class="card-value">${card.isJutsu ? '⚡' : card.value}</span>
+                        <span class="card-element-icon">${card.element}</span>
+                    </div>
+                    <div class="card-art">
+                        ${getElementSVG(card.element)}
+                    </div>
+                    <div class="card-footer">${card.name}</div>
+                </div>
+            `;
+        }
 
-function disableAll() {
-  document.querySelectorAll('button').forEach(b => b.disabled = true);
-}
+        /* --- Player Interaction & Selection --- */
+        function toggleCardSelect(index) {
+            AudioSys.init();
+            if (gameState.currentTurn !== 'player') return;
 
-function aiTurn() {
-  log("🤖 Player 2 (AI) is thinking...", "p2");
-  p2.addChakra(2);
-  p1.addChakra(2);
+            const pos = gameState.selectedCardIndices.indexOf(index);
+            if (pos > -1) {
+                gameState.selectedCardIndices.splice(pos, 1);
+            } else {
+                gameState.selectedCardIndices.push(index);
+            }
 
-  const attacker = p2.getActive();
-  const defender = p1.getActive();
+            AudioSys.playPlayCard();
+            renderUI();
+        }
 
-  setTimeout(() => {
-    if (p2.chakra >= 8) {
-      p2.chakra -= 8;
-      log(`🔥 P2 ULTIMATE! ${attacker.name} uses${attacker.ultName}!`, "p2");
-      const dmg = calculateDamage(attacker, defender, 65);
-      defender.hp -= dmg;
-      log(`💥 ${defender.name} took${dmg} damage!`, "p2");
-    } else if (p2.chakra >= 4) {
-      p2.chakra -= 4;
-      log(`🌀 P2 CASTS JUTSU! ${attacker.name} uses${attacker.jutsuName}!`, "p2");
-      const dmg = calculateDamage(attacker, defender, 35);
-      defender.hp -= dmg;
-      log(`💥 ${defender.name} took${dmg} damage!`, "p2");
-    } else {
-      log(`⚔️ P2 ATTACKS! ${attacker.name} strikes!`, "p2");
-      const dmg = calculateDamage(attacker, defender, 15);
-      defender.hp -= dmg;
-      log(`💥 ${defender.name} took${dmg} damage!`, "p2");
-    }
+        /* --- Move Validation Engine --- */
+        function isValidSinglePlay(card, topDiscard) {
+            if (!card || !topDiscard) return false;
+            // Wild Jutsu can always be played
+            if (card.isJutsu && card.value === 'wild') return true;
+            // Action Jutsus can match if element matches or another jutsu
+            if (card.isJutsu) return topDiscard.isJutsu || card.element === gameState.activeElement;
+            
+            // Standard Cards match Element or Value
+            return card.element === gameState.activeElement || card.value === gameState.activeValue;
+        }
 
-    checkFaints();
-    if (p1.isAlive()) {
-      isPlayerTurn = true;
-    }
-    updateUI();
-  }, 800);
-}
+        function validateSelectedPlay() {
+            // Filter out any invalid indices
+            gameState.selectedCardIndices = gameState.selectedCardIndices.filter(idx => idx >= 0 && idx < gameState.playerHand.length);
+            if (gameState.selectedCardIndices.length === 0) return false;
 
-// Initial Launch Sequence
-log("🎮 Match Started! Shinobi Bout v1.0", "sys");
-log("💡 Elements: Fire > Wind > Lightning > Earth > Water > Fire", "sys");
-updateUI();
-</script>
+            const selectedCards = gameState.selectedCardIndices.map(idx => gameState.playerHand[idx]);
+            const topDiscard = gameState.discardPile[gameState.discardPile.length - 1];
+
+            // Single Card Play
+            if (selectedCards.length === 1) {
+                return isValidSinglePlay(selectedCards[0], topDiscard);
+            }
+
+            // Sequential Run Play (Must all be non-jutsu, same element, and consecutive numbers)
+            const sameElement = selectedCards.every(c => !c.isJutsu && c.element === selectedCards[0].element);
+            if (!sameElement) return false;
+
+            const values = selectedCards.map(c => c.value).sort((a, b) => a - b);
+            for (let i = 0; i < values.length - 1; i++) {
+                if (values[i + 1] !== values[i] + 1) return false;
+            }
+
+            // First card of sequence must match top discard element or value
+            const firstMatchingCard = selectedCards.some(c => c.element === gameState.activeElement || c.value === gameState.activeValue);
+            return firstMatchingCard;
+        }
+
+        /* --- Action Handlers --- */
+        function handlePlaySelectedCards() {
+            if (gameState.currentTurn !== 'player') return;
+
+            if (!validateSelectedPlay()) {
+                logMessage('System', 'Invalid card selection! Must match element, value, or form a valid sequential run.');
+                return;
+            }
+
+            // Sort indices in descending order to avoid splice shifts
+            gameState.selectedCardIndices.sort((a, b) => b - a);
+
+            const playedCards = [];
+            gameState.selectedCardIndices.forEach(idx => {
+                playedCards.push(gameState.playerHand.splice(idx, 1)[0]);
+            });
+
+            gameState.selectedCardIndices = [];
+            const lastPlayedCard = playedCards[playedCards.length - 1];
+
+            // Push played cards to discard pile
+            playedCards.forEach(c => gameState.discardPile.push(c));
+
+            logMessage('You', `Played ${playedCards.map(c => c.name + ' (' + c.element + ')').join(', ')}`);
+            AudioSys.playPlayCard();
+
+            // Check Win Condition
+            if (gameState.playerHand.length === 0) {
+                triggerGameOver(true);
+                return;
+            }
+
+            // Apply Card Effects
+            processPlayedCardEffects(lastPlayedCard);
+        }
+
+        function handleDrawCard() {
+            AudioSys.init();
+            if (gameState.currentTurn !== 'player') return;
+
+            if (gameState.deck.length === 0) {
+                reshuffleDiscardPile();
+            }
+
+            if (gameState.deck.length > 0) {
+                const drawn = gameState.deck.pop();
+                gameState.playerHand.push(drawn);
+                logMessage('You', 'Drew a card from the deck.');
+                AudioSys.playDrawCard();
+            }
+
+            // End Turn after draw
+            switchTurn();
+        }
+
+        function processPlayedCardEffects(card) {
+            gameState.activeElement = card.element;
+            gameState.activeValue = card.isJutsu ? null : card.value;
+
+            if (card.isJutsu) {
+                AudioSys.playJutsu();
+                if (card.value === 'wild') {
+                    // Open Color Selector Modal
+                    openModal('color-modal');
+                    return; // Turn switch occurs after selection
+                } else if (card.value === 'skip') {
+                    logMessage('Jutsu', 'Substitution Jutsu! Opponent turn skipped!');
+                    renderUI();
+                    if (!gameState.isMultiplayer && gameState.currentTurn === 'opponent') {
+                        setTimeout(playAITurn, 1200);
+                    }
+                    return; // Keep turn
+                } else if (card.value === 'draw2') {
+                    logMessage('Jutsu', 'Shadow Clone Jutsu! Opponent draws +2 cards!');
+                    drawCardsForOpponent(2);
+                } else if (card.value === 'draw4') {
+                    logMessage('Jutsu', 'Reaper Seal! Opponent draws +4 cards!');
+                    drawCardsForOpponent(4);
+                }
+            }
+
+            switchTurn();
+        }
+
+        function selectChakraElement(element) {
+            gameState.activeElement = element;
+            logMessage('System', `Chakra Element shifted to ${element.toUpperCase()}!`);
+            closeModal('color-modal');
+            switchTurn();
+        }
+
+        function drawCardsForOpponent(count) {
+            for (let i = 0; i < count; i++) {
+                if (gameState.deck.length === 0) reshuffleDiscardPile();
+                if (gameState.deck.length > 0) {
+                    gameState.opponentHand.push(gameState.deck.pop());
+                }
+            }
+        }
+
+        function switchTurn() {
+            gameState.currentTurn = (gameState.currentTurn === 'player') ? 'opponent' : 'player';
+            renderUI();
+
+            if (gameState.isMultiplayer) {
+                broadcastGameState();
+            } else if (gameState.currentTurn === 'opponent') {
+                setTimeout(playAITurn, 1200);
+            }
+        }
+
+        function reshuffleDiscardPile() {
+            if (gameState.discardPile.length <= 1) return;
+            const top = gameState.discardPile.pop();
+            gameState.deck = gameState.discardPile;
+            gameState.discardPile = [top];
+
+            // Shuffle
+            for (let i = gameState.deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [gameState.deck[i], gameState.deck[j]] = [gameState.deck[j], gameState.deck[i]];
+            }
+            logMessage('System', 'Deck empty. Discard pile reshuffled into deck.');
+        }
+
+        /* --- Artificial Intelligence (Boruto AI) --- */
+        function playAITurn() {
+            if (gameState.currentTurn !== 'opponent' || gameState.isMultiplayer) return;
+
+            const topDiscard = gameState.discardPile[gameState.discardPile.length - 1];
+            let playableIndices = [];
+
+            gameState.opponentHand.forEach((card, idx) => {
+                if (isValidSinglePlay(card, topDiscard)) {
+                    playableIndices.push(idx);
+                }
+            });
+
+            if (playableIndices.length > 0) {
+                // Select first valid card
+                const choiceIndex = playableIndices[0];
+                const playedCard = gameState.opponentHand.splice(choiceIndex, 1)[0];
+                gameState.discardPile.push(playedCard);
+
+                logMessage('Boruto AI', `Played ${playedCard.name} (${playedCard.element})`);
+                AudioSys.playPlayCard();
+
+                if (gameState.opponentHand.length === 0) {
+                    triggerGameOver(false);
+                    return;
+                }
+
+                // AI Wild Card Handling
+                if (playedCard.isJutsu && playedCard.value === 'wild') {
+                    const randomElement = CHAKRA_TYPES[Math.floor(Math.random() * CHAKRA_TYPES.length)];
+                    gameState.activeElement = randomElement;
+                    logMessage('Boruto AI', `Shifted Chakra Element to ${randomElement.toUpperCase()}`);
+                    switchTurn();
+                    return;
+                }
+
+                processPlayedCardEffects(playedCard);
+            } else {
+                // AI Draws Card
+                if (gameState.deck.length === 0) reshuffleDiscardPile();
+                if (gameState.deck.length > 0) {
+                    gameState.opponentHand.push(gameState.deck.pop());
+                    logMessage('Boruto AI', 'Drew a card.');
+                    AudioSys.playDrawCard();
+                }
+                switchTurn();
+            }
+        }
+
+        /* --- PeerJS WebRTC Multiplayer Engine --- */
+        function initPeerJS() {
+            try {
+                // Initialize PeerJS client with auto-generated ID
+                gameState.peer = new Peer();
+
+                gameState.peer.on('open', (id) => {
+                    document.getElementById('my-peer-id').value = id;
+                });
+
+                gameState.peer.on('connection', (conn) => {
+                    gameState.conn = conn;
+                    gameState.isMultiplayer = true;
+                    gameState.isHost = true;
+                    setupConnectionListeners();
+                    closeModal('multiplayer-modal');
+                    logMessage('System', 'Opponent connected! Starting online match.');
+                    document.getElementById('network-status-badge').innerText = 'ONLINE MULTIPLAYER';
+                    initGame();
+                });
+
+                gameState.peer.on('error', (err) => {
+                    console.warn('PeerJS server connection error, switching to Local Multi-Tab fallback:', err);
+                    setupBroadcastChannelFallback();
+                });
+            } catch (err) {
+                console.warn('PeerJS init failed due to iframe security sandbox, using Local BroadcastChannel fallback:', err);
+                setupBroadcastChannelFallback();
+            }
+        }
+
+        function setupBroadcastChannelFallback() {
+            // Native BroadcastChannel allows 2 local tabs/windows to play together without WebSocket dependency
+            try {
+                gameState.broadcastChannel = new BroadcastChannel('shinobi_bout_channel');
+                document.getElementById('my-peer-id').value = 'LOCAL_TAB_MODE';
+                document.getElementById('target-peer-id').placeholder = 'TYPE "LEAF1" IN BOTH TABS';
+
+                gameState.broadcastChannel.onmessage = (event) => {
+                    const data = event.data;
+                    if (data.type === 'CONNECT_REQUEST') {
+                        gameState.isMultiplayer = true;
+                        closeModal('multiplayer-modal');
+                        logMessage('System', 'Connected via Local Multi-Tab Channel!');
+                        document.getElementById('network-status-badge').innerText = 'LOCAL MULTI-TAB';
+                    } else if (data.type === 'GAME_STATE_SYNC') {
+                        receiveGameStateSync(data.payload);
+                    } else if (data.type === 'CHAT_MSG') {
+                        logMessage('Opponent', data.text);
+                    }
+                };
+            } catch(e) {
+                console.error("BroadcastChannel unsupported", e);
+            }
+        }
+
+        function connectToPeer() {
+            const targetId = document.getElementById('target-peer-id').value.trim();
+            if (!targetId) return;
+
+            if (gameState.broadcastChannel) {
+                // Fallback Multi-Tab Connect
+                gameState.isMultiplayer = true;
+                gameState.isHost = false;
+                gameState.broadcastChannel.postMessage({ type: 'CONNECT_REQUEST' });
+                closeModal('multiplayer-modal');
+                logMessage('System', 'Connected to Local Room: ' + targetId);
+                document.getElementById('network-status-badge').innerText = 'LOCAL MULTI-TAB';
+                return;
+            }
+
+            if (!gameState.peer) return;
+
+            gameState.conn = gameState.peer.connect(targetId);
+            gameState.isMultiplayer = true;
+            gameState.isHost = false;
+
+            setupConnectionListeners();
+            closeModal('multiplayer-modal');
+            logMessage('System', 'Connecting to room: ' + targetId);
+            document.getElementById('network-status-badge').innerText = 'ONLINE MULTIPLAYER';
+        }
+
+        function setupConnectionListeners() {
+            gameState.conn.on('open', () => {
+                logMessage('System', 'WebRTC Handshake established!');
+            });
+
+            gameState.conn.on('data', (data) => {
+                if (data.type === 'GAME_STATE_SYNC') {
+                    receiveGameStateSync(data.payload);
+                } else if (data.type === 'CHAT_MSG') {
+                    logMessage('Opponent', data.text);
+                }
+            });
+
+            gameState.conn.on('close', () => {
+                logMessage('System', 'Opponent disconnected.');
+                gameState.isMultiplayer = false;
+                document.getElementById('network-status-badge').innerText = 'SOLO vs AI';
+            });
+        }
+
+        function broadcastGameState() {
+            if (!gameState.isMultiplayer) return;
+
+            const payload = {
+                deck: gameState.deck,
+                discardPile: gameState.discardPile,
+                playerHand: gameState.opponentHand, // Invert perspective for remote client
+                opponentHand: gameState.playerHand,
+                currentTurn: gameState.currentTurn === 'player' ? 'opponent' : 'player',
+                activeElement: gameState.activeElement,
+                activeValue: gameState.activeValue
+            };
+
+            if (gameState.conn && gameState.conn.open) {
+                gameState.conn.send({ type: 'GAME_STATE_SYNC', payload });
+            } else if (gameState.broadcastChannel) {
+                gameState.broadcastChannel.postMessage({ type: 'GAME_STATE_SYNC', payload });
+            }
+        }
+
+        function receiveGameStateSync(payload) {
+            gameState.deck = payload.deck;
+            gameState.discardPile = payload.discardPile;
+            gameState.playerHand = payload.playerHand;
+            gameState.opponentHand = payload.opponentHand;
+            gameState.currentTurn = payload.currentTurn;
+            gameState.activeElement = payload.activeElement;
+            gameState.activeValue = payload.activeValue;
+            renderUI();
+        }
+
+        /* --- Chat System --- */
+        function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const msg = input.value.trim();
+            if (!msg) return;
+
+            logMessage('You', msg);
+            input.value = '';
+
+            if (gameState.isMultiplayer) {
+                if (gameState.conn && gameState.conn.open) {
+                    gameState.conn.send({ type: 'CHAT_MSG', text: msg });
+                } else if (gameState.broadcastChannel) {
+                    gameState.broadcastChannel.postMessage({ type: 'CHAT_MSG', text: msg });
+                }
+            }
+        }
+
+        /* --- UI Helper Functions --- */
+        function logMessage(sender, text) {
+            const logEl = document.getElementById('battle-log');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `<span class="highlight">${sender}:</span> ${text}`;
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function triggerGameOver(isPlayerWin) {
+            const titleEl = document.getElementById('gameover-title');
+            const bodyEl = document.getElementById('gameover-body');
+
+            if (isPlayerWin) {
+                titleEl.innerText = "VICTORY!";
+                titleEl.style.color = "var(--border-gold)";
+                bodyEl.innerText = "Congratulations! You emptied your hand and dominated the Shinobi Bout arena!";
+            } else {
+                titleEl.innerText = "DEFEAT";
+                titleEl.style.color = "var(--accent-red)";
+                bodyEl.innerText = "Boruto AI outmaneuvered your strategy. Train harder and try again!";
+            }
+
+            openModal('gameover-modal');
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        // Event Listeners
+        document.getElementById('btn-multiplayer').addEventListener('click', () => {
+            openModal('multiplayer-modal');
+            if (!gameState.peer) initPeerJS();
+        });
+
+        document.getElementById('btn-restart').addEventListener('click', () => {
+            initGame();
+        });
+
+        // Initialize Game on Load
+        window.onload = () => {
+            initGame();
+        };
+    </script>
 </body>
 </html>
